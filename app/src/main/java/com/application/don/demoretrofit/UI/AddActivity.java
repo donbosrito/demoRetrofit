@@ -1,5 +1,6 @@
 package com.application.don.demoretrofit.UI;
 
+import android.app.ProgressDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -8,9 +9,13 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.application.don.demoretrofit.Adapter.SinhVienAdapter;
 import com.application.don.demoretrofit.Model.SinhVien;
+import com.application.don.demoretrofit.Model.SinhVienHelper;
+import com.application.don.demoretrofit.Presenter.SinhVienPresenter;
 import com.application.don.demoretrofit.R;
 import com.application.don.demoretrofit.API.SinhVienAPI;
+import com.application.don.demoretrofit.View.SinhVienView;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,11 +31,15 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 
-public class AddActivity extends AppCompatActivity {
+public class AddActivity extends AppCompatActivity implements SinhVienView {
 
     Button btnAdd, btnCancel;
     EditText edtMSSV, edtTen, edtLop;
 
+    ProgressDialog loading;
+
+    private SinhVienPresenter sinhVienPresenter;
+    private SinhVienHelper sinhVienHelper;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,6 +58,12 @@ public class AddActivity extends AppCompatActivity {
             }
         });
 
+        if (sinhVienPresenter == null) {
+            if (sinhVienHelper == null)
+                sinhVienHelper = new SinhVienHelper();
+            sinhVienPresenter = new SinhVienPresenter(this, sinhVienHelper);
+        }
+
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -58,36 +73,11 @@ public class AddActivity extends AppCompatActivity {
                     Toast.makeText(AddActivity.this, "Vui lòng điền đầy đủ thông tin", Toast.LENGTH_SHORT).show();
                     return;
                 } else {
-                    insertSinhVien();
+                    if (sinhVienPresenter != null)
+                        sinhVienPresenter.insertSinhVien(edtMSSV.getText().toString(),
+                                edtTen.getText().toString(),
+                                edtLop.getText().toString());
                 }
-            }
-        });
-    }
-
-    private void insertSinhVien() {
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(MainActivity.ROOT_URL)
-                // Sử dụng GSON cho việc parse và maps JSON data tới Object
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        SinhVienAPI sinhVienAPI = retrofit.create(SinhVienAPI.class);
-        // Get all post and add call back to catch response
-        Call<Boolean> callInsertSinhVien = sinhVienAPI.insertSinhVien(edtMSSV.getText().toString(),
-                edtTen.getText().toString(),
-                edtLop.getText().toString());
-        callInsertSinhVien.enqueue(new Callback<Boolean>() {
-            @Override
-            public void onResponse(Call<Boolean> call, Response<Boolean> response) {
-                if (response.body())
-                    finish();
-                else
-                    Toast.makeText(AddActivity.this, "Có lỗi xảy ra", Toast.LENGTH_LONG).show();
-            }
-
-            @Override
-            public void onFailure(Call<Boolean> call, Throwable t) {
-
             }
         });
     }
@@ -101,5 +91,31 @@ public class AddActivity extends AppCompatActivity {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    public void reload() {
+        loading = ProgressDialog.show(this,"Fetching Data","Please wait...",false,false);
+    }
+
+    @Override
+    public void showNoData() {
+        loading.dismiss();
+        Toast.makeText(this, "Thêm Sinh viên thành công", Toast.LENGTH_SHORT).show();
+        finish();
+    }
+
+    @Override
+    public void showError() {
+        loading.dismiss();
+        Toast.makeText(this, "Có lỗi xảy ra", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void displayAllSinhVien(List<SinhVien> lstSinhVien) {
+    }
+
+    @Override
+    public void displaySinhVien(SinhVien sinhVien) {
     }
 }

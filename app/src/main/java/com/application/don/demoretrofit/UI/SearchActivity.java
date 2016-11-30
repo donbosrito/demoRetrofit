@@ -11,9 +11,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.application.don.demoretrofit.API.SinhVienAPI;
+import com.application.don.demoretrofit.Adapter.SinhVienAdapter;
 import com.application.don.demoretrofit.Model.SinhVien;
+import com.application.don.demoretrofit.Model.SinhVienHelper;
+import com.application.don.demoretrofit.Presenter.SinhVienPresenter;
 import com.application.don.demoretrofit.R;
+import com.application.don.demoretrofit.View.SinhVienView;
 
+
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -21,12 +27,15 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class SearchActivity extends AppCompatActivity {
+public class SearchActivity extends AppCompatActivity implements SinhVienView {
 
     ImageButton btnSearch;
     EditText edtSearch;
     ProgressDialog loading;
     TextView txtMSSV, txtTen, txtLop;
+
+    private SinhVienPresenter sinhVienPresenter;
+    private SinhVienHelper sinhVienHelper;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,45 +47,21 @@ public class SearchActivity extends AppCompatActivity {
         txtTen = (TextView) findViewById(R.id.txtTen);
         txtLop = (TextView) findViewById(R.id.txtLop);
 
+
+        if (sinhVienPresenter == null) {
+            if (sinhVienHelper == null)
+                sinhVienHelper = new SinhVienHelper();
+            sinhVienPresenter = new SinhVienPresenter(this, sinhVienHelper);
+        }
+
         btnSearch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                getSinhVienByMaSo();
+                if (sinhVienPresenter != null)
+                    sinhVienPresenter.getSinhVienByMaSo(edtSearch.getText().toString());
             }
         });
     }
-
-    public void getSinhVienByMaSo() {
-        loading = ProgressDialog.show(this,"Fetching Data","Please wait...",false,false);
-
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(MainActivity.ROOT_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        SinhVienAPI sinhVienAPI = retrofit.create(SinhVienAPI.class);
-        Call<SinhVien> callGetSinhVienByMaSo = sinhVienAPI.getSinhVienByMaSo(edtSearch.getText().toString());
-        callGetSinhVienByMaSo.enqueue(new Callback<SinhVien>() {
-            @Override
-            public void onResponse(Call<SinhVien> call, Response<SinhVien> response) {
-                loading.dismiss();
-                if (response.body() != null) {
-                    txtMSSV.setText(response.body().getMaSo());
-                    txtTen.setText(response.body().getTen());
-                    txtLop.setText(response.body().getLop());
-                }
-                else
-                    Toast.makeText(SearchActivity.this, "Không tìm thấy sinh viên này",Toast.LENGTH_LONG).show();
-            }
-
-            @Override
-            public void onFailure(Call<SinhVien> call, Throwable t) {
-                loading.dismiss();
-                Toast.makeText(SearchActivity.this, t.getLocalizedMessage(),Toast.LENGTH_LONG).show();
-            }
-        });
-    }
-
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -87,5 +72,34 @@ public class SearchActivity extends AppCompatActivity {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    public void reload() {
+        loading = ProgressDialog.show(this,"Fetching Data","Please wait...",false,false);
+    }
+
+    @Override
+    public void showNoData() {
+        loading.dismiss();
+        Toast.makeText(this, "Không tìm thấy sinh viên này", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void showError() {
+        loading.dismiss();
+        Toast.makeText(this, "Có lỗi xảy ra", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void displayAllSinhVien(List<SinhVien> lstSinhVien) {
+    }
+
+    @Override
+    public void displaySinhVien(SinhVien sinhVien) {
+        loading.dismiss();
+        txtMSSV.setText(sinhVien.getMaSo());
+        txtTen.setText(sinhVien.getTen());
+        txtLop.setText(sinhVien.getLop());
     }
 }
